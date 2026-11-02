@@ -1,9 +1,12 @@
 """Command-line interface: convert a CSV file with a header row to JSON."""
 
 import argparse
+import contextlib
 import csv
 import json
+import os
 import sys
+import tempfile
 
 
 class CsvError(Exception):
@@ -36,6 +39,39 @@ def read_rows(path: str) -> list[dict[str, str]]:
     return rows
 
 
+def _write_stdout(text: str) -> None:
+    buffer = getattr(sys.stdout, "buffer", None)
+    if buffer is None:
+        sys.stdout.write(text)
+        return
+    sys.stdout.flush()
+    buffer.write(text.encode("utf-8"))
+    buffer.flush()
+
+
+def _current_umask() -> int:
+    umask = os.umask(0)
+    os.umask(umask)
+    return umask
+
+
+def _write_atomic(path: str, data: bytes) -> None:
+    directory = os.path.dirname(os.path.abspath(path))
+    prefix = "." + os.path.basename(path) + "."
+    fd, tmp = tempfile.mkstemp(dir=directory, prefix=prefix, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+            f.flush()
+        if os.name == "posix":
+            os.chmod(tmp, 0o666 & ~_current_umask())
+        os.replace(tmp, path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp)
+        raise
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="csv_tool", description="Convert a CSV file to a JSON array."
@@ -58,11 +94,10 @@ def main(argv: list[str] | None = None) -> int:
 
     text = json.dumps(rows, ensure_ascii=False, indent=2) + "\n"
     if args.output is None:
-        sys.stdout.write(text)
+        _write_stdout(text)
         return 0
     try:
-        with open(args.output, "w", encoding="utf-8") as f:
-            f.write(text)
+        _write_atomic(args.output, text.encode("utf-8"))
     except OSError as e:
         print(f"error: cannot write {args.output}: {e.strerror or e}", file=sys.stderr)
         return 1
