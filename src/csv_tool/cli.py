@@ -74,12 +74,21 @@ def _write_atomic(path: str, data: bytes) -> None:
         raise
 
 
+def _to_json(rows: list[dict[str, str]], compact: bool) -> str:
+    if compact:
+        return json.dumps(rows, ensure_ascii=False, separators=(",", ":")) + "\n"
+    return json.dumps(rows, ensure_ascii=False, indent=2) + "\n"
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="csv_tool", description="Convert a CSV file to a JSON array."
     )
     parser.add_argument("input", help="input CSV file with a header row")
     parser.add_argument("-o", "--output", help="write JSON here instead of stdout")
+    parser.add_argument(
+        "--compact", action="store_true", help="write the JSON array on a single line"
+    )
     parser.add_argument(
         "--version", action="version", version=f"%(prog)s {__version__}"
     )
@@ -97,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {args.input}: {e}", file=sys.stderr)
         return 1
 
-    text = json.dumps(rows, ensure_ascii=False, indent=2) + "\n"
+    text = _to_json(rows, args.compact)
     if args.output is None:
         _write_stdout(text)
         return 0
