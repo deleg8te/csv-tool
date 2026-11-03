@@ -373,3 +373,64 @@ def test_subprocess_missing_file(tmp_path):
     assert result.stderr.startswith("error:")
     assert "Traceback" not in result.stderr
     assert result.stdout == ""
+
+
+# --version: AC-1, AC-3
+
+
+def test_version_option_prints_version_and_exits_zero(capsys):
+    with pytest.raises(SystemExit) as exc:
+        run_main(["--version"])
+    out, err = capsys.readouterr()
+    assert exc.value.code == 0
+    assert out == "csv_tool 0.1.0\n"
+    assert err == ""
+
+
+def test_version_option_does_not_require_input(capsys):
+    with pytest.raises(SystemExit) as exc:
+        run_main(["--version"])
+    out, err = capsys.readouterr()
+    assert exc.value.code != 2
+    assert "usage" not in (out + err).lower()
+    assert "error" not in (out + err).lower()
+
+
+# --version: AC-4
+
+
+def test_version_option_with_input_does_not_convert(tmp_path, capsys):
+    src = write_csv(tmp_path / "in.csv", SAMPLE)
+    dest = tmp_path / "OUT.json"
+    with pytest.raises(SystemExit) as exc:
+        run_main([str(src), "-o", str(dest), "--version"])
+    out, err = capsys.readouterr()
+    assert exc.value.code == 0
+    assert out == "csv_tool 0.1.0\n"
+    assert err == ""
+    assert not dest.exists()
+
+
+# --version: AC-6
+
+
+def test_help_lists_version_option(capsys):
+    with pytest.raises(SystemExit) as exc:
+        run_main(["--help"])
+    out, _ = capsys.readouterr()
+    assert exc.value.code == 0
+    assert "--version" in out
+
+
+# --version: AC-2
+
+
+def test_subprocess_version(tmp_path):
+    import csv_tool
+
+    result = _run_module(["--version"], tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == "csv_tool 0.1.0\n"
+    assert result.stdout == f"csv_tool {csv_tool.__version__}\n"
+    assert result.stderr == ""
+    assert "Traceback" not in result.stdout + result.stderr
