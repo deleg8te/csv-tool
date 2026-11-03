@@ -81,6 +81,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("input", help="input CSV file with a header row")
     parser.add_argument("-o", "--output", help="write JSON here instead of stdout")
     parser.add_argument(
+        "--compact",
+        action="store_true",
+        help="write JSON on a single line without indentation",
+    )
+    parser.add_argument(
         "--version", action="version", version=f"%(prog)s {__version__}"
     )
     args = parser.parse_args(argv)
@@ -97,7 +102,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {args.input}: {e}", file=sys.stderr)
         return 1
 
-    text = json.dumps(rows, ensure_ascii=False, indent=2) + "\n"
+    if args.compact:
+        text = json.dumps(rows, ensure_ascii=False, separators=(",", ":")) + "\n"
+    else:
+        text = json.dumps(rows, ensure_ascii=False, indent=2) + "\n"
     if args.output is None:
         _write_stdout(text)
         return 0
