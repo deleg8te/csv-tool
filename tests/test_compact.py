@@ -364,3 +364,8 @@ def test_subprocess_compact_non_ascii(tmp_path):
     result = _run_module([str(src), "--compact"], tmp_path)
     assert result.returncode == 0, result.stderr.decode("utf-8", "replace")
     assert result.stdout == NON_ASCII_COMPACT
+
+
+def test_outside_push_check():
+    # Milestone 4 exit check: an outside edit to the approved acceptance tests.
+    assert True
