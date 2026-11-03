@@ -8,6 +8,8 @@ import os
 import sys
 import tempfile
 
+from csv_tool import __version__
+
 
 class CsvError(Exception):
     """Raised when the input CSV is malformed."""
@@ -78,6 +80,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("input", help="input CSV file with a header row")
     parser.add_argument("-o", "--output", help="write JSON here instead of stdout")
+    parser.add_argument(
+        "--version", action="version", version=f"%(prog)s {__version__}"
+    )
     args = parser.parse_args(argv)
 
     try:
