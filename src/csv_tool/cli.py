@@ -19,9 +19,9 @@ def _is_blank(record: list[str]) -> bool:
     return not record or (len(record) == 1 and not record[0].strip())
 
 
-def read_rows(path: str) -> list[dict[str, str]]:
+def read_rows(path: str, delimiter: str = ",") -> list[dict[str, str]]:
     with open(path, encoding="utf-8-sig", newline="") as f:
-        reader = csv.reader(f)
+        reader = csv.reader(f, delimiter=delimiter)
         header: list[str] | None = None
         rows: list[dict[str, str]] = []
         for record in reader:
@@ -39,6 +39,16 @@ def read_rows(path: str) -> list[dict[str, str]]:
     if header is None:
         raise CsvError(f"{path}: file has no header row")
     return rows
+
+
+def _delimiter(value: str) -> str:
+    if value == "\\t":
+        return "\t"
+    if len(value) != 1 or value in '"\r\n':
+        raise argparse.ArgumentTypeError(
+            f"invalid delimiter {value!r}: must be a single character or \\t"
+        )
+    return value
 
 
 def _write_stdout(text: str) -> None:
@@ -81,12 +91,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("input", help="input CSV file with a header row")
     parser.add_argument("-o", "--output", help="write JSON here instead of stdout")
     parser.add_argument(
+        "-d",
+        "--delimiter",
+        type=_delimiter,
+        default=",",
+        help="field delimiter: a single character, or \\t for tab (default: ,)",
+    )
+    parser.add_argument(
         "--version", action="version", version=f"%(prog)s {__version__}"
     )
     args = parser.parse_args(argv)
 
     try:
-        rows = read_rows(args.input)
+        rows = read_rows(args.input, args.delimiter)
     except OSError as e:
         print(f"error: cannot read {args.input}: {e.strerror or e}", file=sys.stderr)
         return 1
