@@ -41,6 +41,14 @@ def read_rows(path: str, delimiter: str = ",") -> list[dict[str, str]]:
     return rows
 
 
+def _read_header(path: str, delimiter: str = ",") -> list[str]:
+    with open(path, encoding="utf-8-sig", newline="") as f:
+        for record in csv.reader(f, delimiter=delimiter):
+            if not _is_blank(record):
+                return record
+    raise CsvError(f"{path}: file has no header row")
+
+
 def _delimiter(value: str) -> str:
     if value == "\\t":
         return "\t"
@@ -98,12 +106,21 @@ def main(argv: list[str] | None = None) -> int:
         help="field delimiter: a single character, or \\t for tab (default: ,)",
     )
     parser.add_argument(
+        "--keys",
+        action="store_true",
+        help="print the header's column names as a JSON array instead of rows",
+    )
+    parser.add_argument(
         "--version", action="version", version=f"%(prog)s {__version__}"
     )
     args = parser.parse_args(argv)
 
     try:
-        rows = read_rows(args.input, args.delimiter)
+        data: list[str] | list[dict[str, str]]
+        if args.keys:
+            data = _read_header(args.input, args.delimiter)
+        else:
+            data = read_rows(args.input, args.delimiter)
     except OSError as e:
         print(f"error: cannot read {args.input}: {e.strerror or e}", file=sys.stderr)
         return 1
@@ -114,7 +131,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {args.input}: {e}", file=sys.stderr)
         return 1
 
-    text = json.dumps(rows, ensure_ascii=False, indent=2) + "\n"
+    text = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
     if args.output is None:
         _write_stdout(text)
         return 0
