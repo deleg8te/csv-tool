@@ -111,6 +111,11 @@ def main(argv: list[str] | None = None) -> int:
         help="print the header's column names as a JSON array instead of rows",
     )
     parser.add_argument(
+        "--sort-keys",
+        action="store_true",
+        help="write each object's keys in sorted order",
+    )
+    parser.add_argument(
         "--version", action="version", version=f"%(prog)s {__version__}"
     )
     args = parser.parse_args(argv)
@@ -131,7 +136,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {args.input}: {e}", file=sys.stderr)
         return 1
 
-    text = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+    sort_keys = args.sort_keys and not args.keys
+    text = json.dumps(data, ensure_ascii=False, indent=2, sort_keys=sort_keys) + "\n"
     if args.output is None:
         _write_stdout(text)
         return 0
